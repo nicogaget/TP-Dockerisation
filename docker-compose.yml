@@ -2,12 +2,9 @@ version: "3"
 
 services:
   # Conteneur base de données
-
   db:
-    image: mongo
+    image: mongo:5.0.5
     container_name: db
-    ports:
-      - "27017:27017"
     volumes:
       # Ce volume permettra de préserver les données si la base de données doit évoluer. Ici, on
       # se base uniquement sur les données dans le dump, et ce volume n'est pas forcément nécessaire
@@ -18,36 +15,36 @@ services:
       # lancé automatiquement au démarrage du conteneur.
       # Ce dossier d'entrypoint est une convention Docker, qui est au moins respectée pour tous les
       # conteneurs de base de données
-
       - ./dump/mongorestore.sh:/docker-entrypoint-initdb.d/mongorestore.sh:ro
+  # Conteneur frontend
+  frontv1:
+    # On construit directement le frontend, depuis le dossier ./front
+    build: ./front/.
+    container_name: front
+    ports:
+      - 80:80
+
+  # Conteneur backend
+  backv1:
+    # On construit directement le backend, depuis le dossier ./back
+    build: ./back/.
+
+    container_name: back
+    environment:
+      - PORT=${PORT}
+      - MONGO_HOST=${MONGO_HOST}
+    ports:
+      - 8080:8080
 
   mongo-express:
     container_name: mongo-express
-    image: mongo-express:0.54
+    image: mongo-express
     depends_on:
       - db
+    restart: always
+    ports:
+      - 8081:8081
     environment:
+      - ME_CONFIG_BASICAUTH_USERNAME=${ME_CONFIG_BASICAUTH_USERNAME}
+      - ME_CONFIG_BASICAUTH_PASSWORD=${ME_CONFIG_BASICAUTH_PASSWORD}
       - ME_CONFIG_MONGODB_SERVER=db
-      - ME_CONFIG_MONGODB_ADMINUSERNAME=toto
-      - ME_CONFIG_MONGODB_ADMINPASSWORD=toto
-    ports:
-      - "6082:8081"
-
-  backv2:
-    container_name: back
-    build: ./back
-    depends_on:
-      - db
-    environment:
-      - MONGO_HOST=${MONGO_HOST}
-      - PORT=${PORT}
-
-  #Conteneur frontend
-
-  frontv2:
-    container_name: front
-
-    build: ./front
-
-    ports:
-      - "80:80"
